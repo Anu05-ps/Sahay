@@ -3,21 +3,20 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Microphone permission -->
     <uses-permission
         android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
     <application
         android:allowBackup="true"
         android:label="Sahāy"
         android:supportsRtl="true"
         android:theme="@style/Theme.Sahay">
+
         <service
             android:name=".NavigationVoiceService"
             android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:exported="false" />
+
         <service
             android:name=".SahayAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"

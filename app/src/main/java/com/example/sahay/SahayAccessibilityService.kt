@@ -1,9 +1,6 @@
 package com.example.sahay
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import android.view.accessibility.AccessibilityNodeInfo
 
 class SahayAccessibilityService :
@@ -18,11 +15,11 @@ class SahayAccessibilityService :
 
             return instance?.clickMapsButton(
                 listOf(
-                    "Pause navigation",
-                    "Pause",
+                    "Exit navigation",
                     "Stop navigation",
+                    "End navigation",
                     "Stop",
-                    "Exit navigation"
+                    "End"
                 )
             ) ?: false
         }
@@ -38,45 +35,10 @@ class SahayAccessibilityService :
                 )
             ) ?: false
         }
-
-        fun returnToSahay() {
-
-            val service =
-                instance ?: return
-
-            /*
-             * Stop the microphone service first.
-             */
-            val serviceIntent =
-                Intent(
-                    service,
-                    NavigationVoiceService::class.java
-                )
-
-            service.stopService(serviceIntent)
-
-            Handler(
-                Looper.getMainLooper()
-            ).postDelayed({
-
-                val intent =
-                    Intent(
-                        service,
-                        MainActivity::class.java
-                    )
-
-                intent.flags =
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
-
-                service.startActivity(intent)
-
-            }, 300)
-        }
     }
 
     override fun onServiceConnected() {
+
         super.onServiceConnected()
 
         instance = this
@@ -85,7 +47,7 @@ class SahayAccessibilityService :
     override fun onAccessibilityEvent(
         event: android.view.accessibility.AccessibilityEvent?
     ) {
-        // Nothing required here.
+        // No automatic action.
     }
 
     override fun onInterrupt() {
@@ -106,6 +68,7 @@ class SahayAccessibilityService :
             rootInActiveWindow
                 ?: return false
 
+        // Search visible text
         for (text in possibleTexts) {
 
             val nodes =
@@ -116,16 +79,13 @@ class SahayAccessibilityService :
             for (node in nodes) {
 
                 if (clickNode(node)) {
+
                     return true
                 }
             }
         }
 
-        /*
-         * Some Maps versions expose the text
-         * differently, so also inspect content
-         * descriptions.
-         */
+        // Search content descriptions
         return searchContentDescriptions(
             root,
             possibleTexts
@@ -147,12 +107,14 @@ class SahayAccessibilityService :
 
             for (text in possibleTexts) {
 
-                if (description.contains(
+                if (
+                    description.contains(
                         text.lowercase()
                     )
                 ) {
 
                     if (clickNode(node)) {
+
                         return true
                     }
                 }
@@ -172,6 +134,7 @@ class SahayAccessibilityService :
                         possibleTexts
                     )
                 ) {
+
                     return true
                 }
             }

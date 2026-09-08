@@ -39,30 +39,19 @@ class MainActivity : AppCompatActivity() {
 
         enableEdgeToEdge()
 
-        setContentView(
-            R.layout.activity_main
-        )
+        setContentView(R.layout.activity_main)
 
-        voiceManager =
-            VoiceManager(this)
-
-        navigationManager =
-            NavigationManager(this)
+        voiceManager = VoiceManager(this)
+        navigationManager = NavigationManager(this)
 
         destinationInput =
-            findViewById(
-                R.id.destinationInput
-            )
+            findViewById(R.id.destinationInput)
 
         speakButton =
-            findViewById(
-                R.id.speakButton
-            )
+            findViewById(R.id.speakButton)
 
         startNavigationButton =
-            findViewById(
-                R.id.startNavigationButton
-            )
+            findViewById(R.id.startNavigationButton)
 
         speakButton.contentDescription =
             "Speak destination"
@@ -71,12 +60,10 @@ class MainActivity : AppCompatActivity() {
             "Start navigation"
 
         speakButton.setOnClickListener {
-
             checkMicrophonePermissionForDestination()
         }
 
         startNavigationButton.setOnClickListener {
-
             startNavigation()
         }
 
@@ -84,10 +71,6 @@ class MainActivity : AppCompatActivity() {
             "Welcome to Sahāy. Say your destination."
         )
     }
-
-    // ============================================================
-    // ACTIVITY RESULT
-    // ============================================================
 
     override fun onActivityResult(
         requestCode: Int,
@@ -101,26 +84,13 @@ class MainActivity : AppCompatActivity() {
             data
         )
 
-        // --------------------------------------------------------
-        // LOCATION SETTINGS RESULT
-        // --------------------------------------------------------
+        if (requestCode == REQUEST_CHECK_SETTINGS) {
 
-        if (
-            requestCode ==
-            REQUEST_CHECK_SETTINGS
-        ) {
+            if (resultCode == RESULT_OK) {
 
-            if (
-                resultCode ==
-                RESULT_OK
-            ) {
+                val destination = pendingDestination
 
-                val destination =
-                    pendingDestination
-
-                if (
-                    destination != null
-                ) {
+                if (destination != null) {
 
                     pendingDestination = null
 
@@ -129,7 +99,9 @@ class MainActivity : AppCompatActivity() {
                                 "Starting navigation to $destination."
                     ) {
 
-                        startNavigationVoiceService()
+                        // IMPORTANT:
+                        // Do NOT start NavigationVoiceService.
+                        // Sahāy's microphone stays OFF.
 
                         navigationManager.openGoogleMaps(
                             destination
@@ -142,17 +114,12 @@ class MainActivity : AppCompatActivity() {
                 pendingDestination = null
 
                 voiceManager.speak(
-                    "Location was not enabled. " +
-                            "Navigation cannot start."
+                    "Location was not enabled."
                 )
             }
 
             return
         }
-
-        // --------------------------------------------------------
-        // SPEECH RESULT CHECK
-        // --------------------------------------------------------
 
         if (
             resultCode != RESULT_OK ||
@@ -166,30 +133,19 @@ class MainActivity : AppCompatActivity() {
                 RecognizerIntent.EXTRA_RESULTS
             )
 
-        if (
-            results.isNullOrEmpty()
-        ) {
+        if (results.isNullOrEmpty()) {
             return
         }
 
-        val spokenText =
-            results[0].trim()
+        if (requestCode == speechRequestCode) {
 
-        // --------------------------------------------------------
-        // DESTINATION RESULT
-        // --------------------------------------------------------
+            val destination =
+                results[0].trim()
 
-        if (
-            requestCode ==
-            speechRequestCode
-        ) {
-
-            destinationInput.setText(
-                spokenText
-            )
+            destinationInput.setText(destination)
 
             voiceManager.speak(
-                "You said $spokenText. " +
+                "You said $destination. " +
                         "Say start to begin navigation."
             ) {
 
@@ -199,26 +155,22 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // --------------------------------------------------------
-        // VOICE COMMAND RESULT
-        // --------------------------------------------------------
+        if (requestCode == voiceCommandRequestCode) {
 
-        if (
-            requestCode ==
-            voiceCommandRequestCode
-        ) {
+            val commands =
+                results.map {
+                    it.lowercase(
+                        Locale.getDefault()
+                    ).trim()
+                }
 
-            handleVoiceCommand(
-                spokenText.lowercase(
-                    Locale.getDefault()
-                )
-            )
+            handleVoiceCommand(commands)
         }
     }
 
-    // ============================================================
-    // DESTINATION SPEECH
-    // ============================================================
+    // ---------------------------------------------------------
+    // DESTINATION MICROPHONE
+    // ---------------------------------------------------------
 
     private fun startDestinationRecognition() {
 
@@ -242,6 +194,11 @@ class MainActivity : AppCompatActivity() {
             "Say your destination"
         )
 
+        intent.putExtra(
+            RecognizerIntent.EXTRA_MAX_RESULTS,
+            5
+        )
+
         try {
 
             startActivityForResult(
@@ -259,9 +216,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ============================================================
-    // START COMMAND SPEECH
-    // ============================================================
+    // ---------------------------------------------------------
+    // START COMMAND
+    // ---------------------------------------------------------
 
     private fun startVoiceCommandRecognition() {
 
@@ -286,13 +243,8 @@ class MainActivity : AppCompatActivity() {
         )
 
         intent.putExtra(
-            RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,
-            1500L
-        )
-
-        intent.putExtra(
-            RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
-            3000L
+            RecognizerIntent.EXTRA_MAX_RESULTS,
+            5
         )
 
         try {
@@ -312,9 +264,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
     // MICROPHONE PERMISSION
-    // ============================================================
+    // ---------------------------------------------------------
 
     private fun checkMicrophonePermissionForDestination() {
 
@@ -322,8 +274,7 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.RECORD_AUDIO
-            ) !=
-            PackageManager.PERMISSION_GRANTED
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
 
             ActivityCompat.requestPermissions(
@@ -352,10 +303,7 @@ class MainActivity : AppCompatActivity() {
             grantResults
         )
 
-        if (
-            requestCode ==
-            microphonePermissionCode
-        ) {
+        if (requestCode == microphonePermissionCode) {
 
             if (
                 grantResults.isNotEmpty() &&
@@ -380,127 +328,85 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ============================================================
-    // VOICE COMMAND HANDLER
-    // ============================================================
+    // ---------------------------------------------------------
+    // VOICE COMMAND
+    // ---------------------------------------------------------
 
     private fun handleVoiceCommand(
-        command: String
+        commands: List<String>
     ) {
 
-        when {
-
-            // ----------------------------------------------------
-            // START
-            // ----------------------------------------------------
-
-            command == "start" ||
-                    command.contains(
-                        "start navigation"
-                    ) ||
-                    command.contains(
-                        "start navigating"
-                    ) -> {
-
-                startNavigation()
+        if (
+            commands.any {
+                it == "start" ||
+                        it == "star" ||
+                        it == "starts" ||
+                        it.contains("start navigation") ||
+                        it.contains("start navigating")
             }
+        ) {
 
-            // ----------------------------------------------------
-            // STOP
-            // ----------------------------------------------------
-
-            command == "stop" ||
-                    command.contains(
-                        "stop navigation"
-                    ) ||
-                    command.contains(
-                        "stop navigating"
-                    ) -> {
-
-                stopNavigation()
-            }
-
-            // ----------------------------------------------------
-            // CONTINUE
-            // ----------------------------------------------------
-
-            command == "continue" ||
-                    command.contains(
-                        "continue navigation"
-                    ) ||
-                    command.contains(
-                        "continue navigating"
-                    ) ||
-                    command == "resume" ||
-                    command.contains(
-                        "resume navigation"
-                    ) -> {
-
-                continueNavigation()
-            }
-
-            // ----------------------------------------------------
-            // RETURN TO APP
-            // ----------------------------------------------------
-
-            command.contains(
-                "return to app"
-            ) ||
-                    command.contains(
-                        "return to sahay"
-                    ) ||
-                    command.contains(
-                        "return to sahāy"
-                    ) ||
-                    command.contains(
-                        "open sahay"
-                    ) ||
-                    command.contains(
-                        "open sahāy"
-                    ) -> {
-
-                returnToSahay()
-            }
-
-            // ----------------------------------------------------
-            // INDOOR RECORDING
-            // ----------------------------------------------------
-
-            command.contains(
-                "record directions"
-            ) ||
-                    command.contains(
-                        "record direction"
-                    ) -> {
-
-                voiceManager.speak(
-                    "Recording directions."
-                )
-
-                startIndoorRecording()
-            }
-
-            // ----------------------------------------------------
-            // UNKNOWN COMMAND
-            // ----------------------------------------------------
-
-            else -> {
-
-                voiceManager.speak(
-                    "I did not understand. " +
-                            "Please say start, stop, " +
-                            "continue, or return to app."
-                ) {
-
-                    startVoiceCommandRecognition()
-                }
-            }
+            startNavigation()
+            return
         }
+
+        /*
+         * These commands are available only when
+         * Sahāy is actually listening.
+         *
+         * During Google Maps navigation the
+         * microphone is OFF.
+         */
+
+        if (
+            commands.any {
+                it == "stop" ||
+                        it.contains("stop navigation") ||
+                        it.contains("stop navigating")
+            }
+        ) {
+
+            stopNavigation()
+            return
+        }
+
+        if (
+            commands.any {
+                it == "continue" ||
+                        it == "resume" ||
+                        it.contains("continue navigation") ||
+                        it.contains("continue navigating") ||
+                        it.contains("resume navigation") ||
+                        it.contains("resume navigating")
+            }
+        ) {
+
+            continueNavigation()
+            return
+        }
+
+        if (
+            commands.any {
+                it.contains("return to app") ||
+                        it.contains("return to sahay") ||
+                        it.contains("return to sahāy") ||
+                        it.contains("open sahay") ||
+                        it.contains("open sahāy")
+            }
+        ) {
+
+            returnToSahay()
+            return
+        }
+
+        voiceManager.speak(
+            "I did not understand."
+        )
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
     // START NAVIGATION
-    // ============================================================
+    // ---------------------------------------------------------
 
     private fun startNavigation() {
 
@@ -509,9 +415,7 @@ class MainActivity : AppCompatActivity() {
                 .toString()
                 .trim()
 
-        if (
-            destination.isEmpty()
-        ) {
+        if (destination.isEmpty()) {
 
             voiceManager.speak(
                 "Please say your destination first."
@@ -523,18 +427,13 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        pendingDestination =
-            destination
+        pendingDestination = destination
 
         voiceManager.speak(
             "Checking location settings."
         )
 
         navigationManager.checkLocationSettings(
-
-            // ----------------------------------------------------
-            // LOCATION ALREADY ENABLED
-            // ----------------------------------------------------
 
             onLocationReady = {
 
@@ -544,17 +443,20 @@ class MainActivity : AppCompatActivity() {
                     "Starting navigation to $destination."
                 ) {
 
-                    startNavigationVoiceService()
+                    /*
+                     * IMPORTANT:
+                     *
+                     * Do NOT start NavigationVoiceService.
+                     *
+                     * Sahāy microphone = OFF
+                     * Google Maps navigation voice = ON
+                     */
 
                     navigationManager.openGoogleMaps(
                         destination
                     )
                 }
             },
-
-            // ----------------------------------------------------
-            // LOCATION PROMPT
-            // ----------------------------------------------------
 
             onLocationPromptShown = {
 
@@ -564,129 +466,60 @@ class MainActivity : AppCompatActivity() {
                 )
             },
 
-            // ----------------------------------------------------
-            // LOCATION ERROR
-            // ----------------------------------------------------
-
             onLocationError = {
 
                 pendingDestination = null
 
                 voiceManager.speak(
-                    "Unable to enable Location. " +
-                            "Please check your phone settings."
+                    "Unable to enable Location."
                 )
             }
         )
     }
 
-    // ============================================================
-    // START VOICE SERVICE
-    // ============================================================
-
-    private fun startNavigationVoiceService() {
-
-        val serviceIntent =
-            Intent(
-                this,
-                NavigationVoiceService::class.java
-            )
-
-        if (
-            android.os.Build.VERSION.SDK_INT >=
-            android.os.Build.VERSION_CODES.O
-        ) {
-
-            ContextCompat.startForegroundService(
-                this,
-                serviceIntent
-            )
-
-        } else {
-
-            startService(
-                serviceIntent
-            )
-        }
-    }
-
-    // ============================================================
+    // ---------------------------------------------------------
     // STOP NAVIGATION
-    // ============================================================
+    // ---------------------------------------------------------
 
     private fun stopNavigation() {
 
         pendingDestination = null
 
-        /*
-         * Stop Sahāy's microphone service.
-         */
-        val serviceIntent =
+        // Ensure Sahāy microphone service is stopped.
+        stopService(
             Intent(
                 this,
                 NavigationVoiceService::class.java
             )
-
-        stopService(
-            serviceIntent
         )
 
-        voiceManager.speak(
-            "Navigation stopped."
-        )
+        SahayAccessibilityService
+            .stopMapsNavigation()
     }
 
-    // ============================================================
-    // CONTINUE NAVIGATION
-    // ============================================================
+    // ---------------------------------------------------------
+    // CONTINUE
+    // ---------------------------------------------------------
 
     private fun continueNavigation() {
 
-        /*
-         * Ask the Accessibility Service
-         * to find the Resume/Continue button
-         * in Google Maps.
-         */
-        val success =
-            SahayAccessibilityService
-                .continueMapsNavigation()
-
-        if (success) {
-
-            voiceManager.speak(
-                "Navigation continued."
-            )
-
-        } else {
-
-            voiceManager.speak(
-                "I could not find the continue navigation button."
-            )
-        }
+        SahayAccessibilityService
+            .continueMapsNavigation()
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
     // RETURN TO SAHĀY
-    // ============================================================
+    // ---------------------------------------------------------
 
     private fun returnToSahay() {
 
-        /*
-         * Stop voice recognition first.
-         */
-        val serviceIntent =
+        stopService(
             Intent(
                 this,
                 NavigationVoiceService::class.java
             )
-
-        stopService(
-            serviceIntent
         )
 
-        /*
-         * Bring Sahāy to the foreground.
-         */
         val intent =
             Intent(
                 this,
@@ -700,9 +533,9 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
     // INDOOR RECORDING
-    // ============================================================
+    // ---------------------------------------------------------
 
     private fun startIndoorRecording() {
 
@@ -711,25 +544,17 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // ============================================================
-    // DESTROY
-    // ============================================================
+    // ---------------------------------------------------------
+    // CLEANUP
+    // ---------------------------------------------------------
 
     override fun onDestroy() {
 
-        /*
-         * Make absolutely sure that
-         * the navigation voice service
-         * is not left running.
-         */
-        val serviceIntent =
+        stopService(
             Intent(
                 this,
                 NavigationVoiceService::class.java
             )
-
-        stopService(
-            serviceIntent
         )
 
         voiceManager.shutdown()
@@ -737,5 +562,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 }
+
+
 
 

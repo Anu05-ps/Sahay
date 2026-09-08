@@ -5,11 +5,11 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.Priority
-import com.google.android.gms.common.api.ResolvableApiException
 
 class NavigationManager(
     private val context: Context
@@ -27,26 +27,35 @@ class NavigationManager(
                 10000
             ).build()
 
-        val builder =
+        val settingsRequest =
             LocationSettingsRequest.Builder()
-                .addLocationRequest(locationRequest)
+                .addLocationRequest(
+                    locationRequest
+                )
+                .build()
 
         val client =
-            LocationServices.getSettingsClient(context)
+            LocationServices
+                .getSettingsClient(context)
 
         val task =
-            client.checkLocationSettings(builder.build())
+            client.checkLocationSettings(
+                settingsRequest
+            )
 
         task.addOnSuccessListener {
-            // Location settings are already suitable
+
             onLocationReady()
         }
 
         task.addOnFailureListener { exception ->
 
-            if (exception is ResolvableApiException) {
+            if (
+                exception is ResolvableApiException
+            ) {
 
                 try {
+
                     exception.startResolutionForResult(
                         context as MainActivity,
                         MainActivity.REQUEST_CHECK_SETTINGS
@@ -66,15 +75,33 @@ class NavigationManager(
         }
     }
 
-    fun openGoogleMaps(destination: String) {
+    fun openGoogleMaps(
+        destination: String
+    ) {
 
         val encodedDestination =
             Uri.encode(destination)
 
-        val googleMapsUri = Uri.parse(
-            "google.navigation:q=" + encodedDestination + "&mode=w"
-        )
+        /*
+         * Google Maps navigation URI.
+         *
+         * mode=w means WALKING.
+         *
+         * Google Maps itself provides:
+         *
+         * - Turn left
+         * - Turn right
+         * - Continue straight
+         * - Recalculate route
+         * - Navigation voice
+         */
 
+        val googleMapsUri =
+            Uri.parse(
+                "google.navigation:q=" +
+                        encodedDestination +
+                        "&mode=w"
+            )
 
         val intent =
             Intent(
@@ -92,12 +119,19 @@ class NavigationManager(
 
         } catch (e: Exception) {
 
-            val webUri = Uri.parse(
-                "https://www.google.com/maps/dir/?api=1" +
-                        "&destination=" + encodedDestination +
-                        "&travelmode=walking" +
-                        "&dir_action=navigate"
-            )
+            /*
+             * Fallback to Google Maps web navigation.
+             */
+
+            val webUri =
+                Uri.parse(
+                    "https://www.google.com/maps/dir/" +
+                            "?api=1" +
+                            "&destination=" +
+                            encodedDestination +
+                            "&travelmode=walking" +
+                            "&dir_action=navigate"
+                )
 
             val webIntent =
                 Intent(
@@ -107,7 +141,9 @@ class NavigationManager(
 
             try {
 
-                context.startActivity(webIntent)
+                context.startActivity(
+                    webIntent
+                )
 
             } catch (exception: Exception) {
 
