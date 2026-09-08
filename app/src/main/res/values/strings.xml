@@ -1,0 +1,9 @@
+<resources>
+
+    <string name="app_name">Sahāy</string>
+
+    <string name="accessibility_service_description">
+        Sahāy uses accessibility to control navigation buttons in Google Maps when voice commands are given.
+    </string>
+
+</resources>
